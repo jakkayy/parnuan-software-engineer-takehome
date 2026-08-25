@@ -159,20 +159,27 @@ export function parseWithRules(
   const datetimeStr = parsedDate.toISOString();
 
   // ตรวจจับว่ามีวลีวันเวลาซับซ้อนหรือไม่
-  const hasComplexTimePhrase = /\d+\s*วัน(?:ที่แล้ว|ก่อน)?|บ่าย\s*\d+|ตี\s*\d+|\d+\s*ทุ่ม/.test(normalizedText);
+  const hasComplexTimePhrase =
+    /\d+\s*วัน(?:ที่แล้ว|ก่อน)?|บ่าย\s*\d+|ตี\s*\d+|\d+\s*ทุ่ม/.test(
+      normalizedText,
+    );
 
   // 1. กำจัดส่วนที่เป็นวลีบอกเวลาออกก่อน เพื่อป้องกันตัวเลขเวลาโดนเข้าใจผิดว่าเป็นราคา
   const textWithoutTime = normalizedText
-    .replace(/เมื่อวานซืน|เมื่อวาน|วันนี้|ตอน|ช่วง|เมื่อเช้า|เมื่อเย็น|กินตอนเมื่อ|กินตอน/g, "")
+    .replace(
+      /เมื่อวานซืน|เมื่อวาน|วันนี้|ตอน|ช่วง|เมื่อเช้า|เมื่อเย็น|กินตอนเมื่อ|กินตอน/g,
+      "",
+    )
     .replace(/\d+\s*วัน(?:ที่แล้ว|ก่อน)?/g, "")
     .replace(
       /(\d{1,2})[:.](\d{2})|(\d{1,2})\s*(?:โมงครึ่ง|โมง|ทุ่ม|นาที)|บ่าย\s*\d{1,2}|ตี\s*\d{1,2}/g,
-      ""
+      "",
     )
     .trim();
 
   // 2. ใช้ Price Anchor Regex จับเฉพาะตัวเลขราคา (ป้องกันตัวเลขที่ติดกับหน่วยเวลา หรือหน่วยจำนวนชิ้น)
-  const priceAnchorRegex = /(\d+(?:\.\d+)?)\s*(?:บาท|\.-)?(?!\s*(?:โมง|ทุ่ม|นาที|นาฬิกา|วัน|ไม้|แก้ว|ชิ้น|จาน|กล่อง|ตัว|ถุง|ขวด|อัน|แผ่น|คู่|ชุด))/g;
+  const priceAnchorRegex =
+    /(\d+(?:\.\d+)?)\s*(?:บาท|\.-)?(?!\s*(?:โมง|ทุ่ม|นาที|นาฬิกา|วัน|ไม้|แก้ว|ชิ้น|จาน|กล่อง|ตัว|ถุง|ขวด|อัน|แผ่น|คู่|ชุด))/g;
 
   const matches = Array.from(textWithoutTime.matchAll(priceAnchorRegex));
   if (matches.length === 0) return [];
@@ -189,9 +196,7 @@ export function parseWithRules(
     lastIndex = matchIndex + match[0].length;
 
     // คงคำบอกจำนวนชิ้น (เช่น "3 ไม้") รวมไว้ในชื่อรายการเพื่อความสมบูรณ์
-    let itemName = rawSegment
-      .replace(/แล้วก็|และ|,|แลัว/g, "")
-      .trim();
+    let itemName = rawSegment.replace(/แล้วก็|และ|,|แลัว/g, "").trim();
 
     if (!itemName) {
       itemName = "รายการไม่ระบุชื่อ";
@@ -224,9 +229,13 @@ export function parseWithRules(
     // 🎯 คำนวณ Heuristic Confidence Score
     let confidence = 0.5; // Base score
     if (itemName !== "รายการไม่ระบุชื่อ") confidence += 0.2;
-    if (matchedCategoryKeyword) confidence += 0.25;
+    if (matchedCategoryKeyword) {
+      confidence += 0.25;
+    } else {
+      // หากหาหมวดหมู่ไม่พบใน Dictionary (ได้หมวด "อื่นๆ") ให้จำกัด confidence ไว้ไม่เกิน 0.65 เพื่อส่งให้ LLM ทำแทน
+      confidence = Math.min(confidence, 0.65);
+    }
 
-    // หากพบวลีเวลาซับซ้อนให้ลดคะแนนลงเพื่อส่งต่อให้ LLM ประมวลผล
     if (hasComplexTimePhrase) {
       confidence -= 0.35;
     }
@@ -245,4 +254,3 @@ export function parseWithRules(
 
   return transactions;
 }
-

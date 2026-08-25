@@ -29,7 +29,7 @@ export async function parseWithGroq(
 
 1. การแยกรายการ (Multi-transaction Handling):
    - 1 ข้อความอาจมีหลายรายการ ให้แยกออกจากกันเมื่อเจอคำเชื่อม (เช่น "แล้วก็", "และ", "กับ", "รวมถึง", "แลัว") หรือสัญลักษณ์แบ่งประโยค
-   - กระชับชื่อรายการ: ตัดคำกริยาและคำฟุ่มเฟือยออก เช่น "โอนค่า...", "แวะซื้อ...", "ไปกิน..." ให้เหลือเฉพาะชื่อสินค้า/บริการ/กิจกรรมหลัก เช่น "ข้าวมันไก่", "กาแฟ", "ช้อปปิ้ง"
+   - เก็บคำระบุจำนวน/หน่วยไว้ในชื่อรายการด้วย: เช่น "กล้วยทอด 3 ถุง", "หมูปิ้ง 5 ไม้", "กาแฟ 2 แก้ว"
 
 2. การคำนวณราคาและจำนวนเงิน (Amount & Currency):
    - รองรับทั้งตัวเลขสากล (50), ตัวเลขไทย (๕๐), ตัวหนังสือคำพูด (เช่น "ห้าร้อย" -> 500, "สองพัน" -> 2000) และสัญลักษณ์ ("50.-", "50 บาท")
@@ -59,9 +59,9 @@ export async function parseWithGroq(
 {
   "transactions": [
     {
-      "item_name": "ชื่อรายการ",
-      "price": 50,
-      "category": "หมวดหมู่",
+      "item_name": "กล้วยทอด 3 ถุง",
+      "price": 60,
+      "category": "อาหาร",
       "type": "รายจ่าย",
       "datetime": "ISO 8601 String",
       "confidence": 0.95
@@ -75,7 +75,7 @@ export async function parseWithGroq(
         { role: "system", content: systemPrompt },
         { role: "user", content: text },
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       temperature: 0.1,
       response_format: { type: "json_object" },
     });
