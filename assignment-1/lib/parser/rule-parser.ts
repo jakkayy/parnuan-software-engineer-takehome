@@ -42,6 +42,11 @@ const CATEGORY_MAP: Record<string, CategoryName> = {
   ก๋วยเตี๋ยว: "อาหาร",
 
   ช้อปปิ้ง: "ช้อปปิ้ง",
+  ชอปปิ้ง: "ช้อปปิ้ง",
+  ช็อปปิ้ง: "ช้อปปิ้ง",
+  ช็อป: "ช้อปปิ้ง",
+  ช้อป: "ช้อปปิ้ง",
+  shopping: "ช้อปปิ้ง",
   ซื้อของ: "ช้อปปิ้ง",
   เสื้อผ้า: "ช้อปปิ้ง",
   รองเท้า: "ช้อปปิ้ง",
@@ -147,15 +152,29 @@ export function parseWithRules(
   referenceTime: Date = new Date(),
 ): ParsedTransaction[] {
   const normalizedText = normalizeThaiDigits(rawText.trim());
-  const { date: parsedDate } = extractRelativeDateTime(
+  const { date: parsedDate, isTimeExplicit } = extractRelativeDateTime(
     normalizedText,
     referenceTime,
   );
   const datetimeStr = parsedDate.toISOString();
 
-  const priceAnchorRegex = /(\d+(?:\.\d+)?)\s*(?:บาท|\.-)?/g;
+  // ตรวจจับว่ามีวลีวันเวลาซับซ้อนหรือไม่
+  const hasComplexTimePhrase = /\d+\s*วัน(?:ที่แล้ว|ก่อน)?|บ่าย\s*\d+|ตี\s*\d+|\d+\s*ทุ่ม/.test(normalizedText);
 
-  const matches = Array.from(normalizedText.matchAll(priceAnchorRegex));
+  // 1. กำจัดส่วนที่เป็นวลีบอกเวลาออกก่อน เพื่อป้องกันตัวเลขเวลาโดนเข้าใจผิดว่าเป็นราคา
+  const textWithoutTime = normalizedText
+    .replace(/เมื่อวานซืน|เมื่อวาน|วันนี้|ตอน|ช่วง|เมื่อเช้า|เมื่อเย็น|กินตอนเมื่อ|กินตอน/g, "")
+    .replace(/\d+\s*วัน(?:ที่แล้ว|ก่อน)?/g, "")
+    .replace(
+      /(\d{1,2})[:.](\d{2})|(\d{1,2})\s*(?:โมงครึ่ง|โมง|ทุ่ม|นาที)|บ่าย\s*\d{1,2}|ตี\s*\d{1,2}/g,
+      ""
+    )
+    .trim();
+
+  // 2. ใช้ Price Anchor Regex จับเฉพาะตัวเลขราคา (ป้องกันตัวเลขที่ติดกับหน่วยเวลา หรือหน่วยจำนวนชิ้น)
+  const priceAnchorRegex = /(\d+(?:\.\d+)?)\s*(?:บาท|\.-)?(?!\s*(?:โมง|ทุ่ม|นาที|นาฬิกา|วัน|ไม้|แก้ว|ชิ้น|จาน|กล่อง|ตัว|ถุง|ขวด|อัน|แผ่น|คู่|ชุด))/g;
+
+  const matches = Array.from(textWithoutTime.matchAll(priceAnchorRegex));
   if (matches.length === 0) return [];
 
   const transactions: ParsedTransaction[] = [];
@@ -166,15 +185,12 @@ export function parseWithRules(
     const price = parseFloat(match[1]);
     const matchIndex = match.index ?? 0;
 
-    let rawSegment = normalizedText.substring(lastIndex, matchIndex).trim();
+    let rawSegment = textWithoutTime.substring(lastIndex, matchIndex).trim();
     lastIndex = matchIndex + match[0].length;
 
+    // คงคำบอกจำนวนชิ้น (เช่น "3 ไม้") รวมไว้ในชื่อรายการเพื่อความสมบูรณ์
     let itemName = rawSegment
-      .replace(/แล้วก็|และ|,|เมื่อวานซืน|เมื่อวาน|วันนี้|ตอน|ช่วง/g, "")
-      .replace(
-        /(\d{1,2})[:.](\d{2})|(\d{1,2})\s*(โมงครึ่ง|ทุ่ม|โมง)|บ่าย\s*\d{1,2}|ตี\s*\d{1,2}/g,
-        "",
-      )
+      .replace(/แล้วก็|และ|,|แลัว/g, "")
       .trim();
 
     if (!itemName) {
@@ -184,7 +200,7 @@ export function parseWithRules(
     let type: TransactionType = "รายจ่าย";
     if (
       INCOME_KEYWORDS.some(
-        (kw) => rawSegment.includes(kw) || normalizedText.includes(kw),
+        (kw) => rawSegment.includes(kw) || textWithoutTime.includes(kw),
       )
     ) {
       type = "รายรับ";
@@ -205,9 +221,15 @@ export function parseWithRules(
       category = "รายรับ";
     }
 
-    let confidence = 0.5;
+    // 🎯 คำนวณ Heuristic Confidence Score
+    let confidence = 0.5; // Base score
     if (itemName !== "รายการไม่ระบุชื่อ") confidence += 0.2;
     if (matchedCategoryKeyword) confidence += 0.25;
+
+    // หากพบวลีเวลาซับซ้อนให้ลดคะแนนลงเพื่อส่งต่อให้ LLM ประมวลผล
+    if (hasComplexTimePhrase) {
+      confidence -= 0.35;
+    }
 
     transactions.push({
       item_id: `rule-${Date.now()}-${i}`,
@@ -217,7 +239,7 @@ export function parseWithRules(
       type: type,
       datetime: datetimeStr,
       parser_source: "RULE_BASED",
-      confidence: Math.min(confidence, 0.95),
+      confidence: Math.max(0.4, Math.min(confidence, 0.95)),
     });
   }
 
