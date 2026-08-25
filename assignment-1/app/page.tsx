@@ -135,32 +135,32 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-900 text-neutral-100 py-8 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-neutral-100 text-neutral-800 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header Title */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-            Parnuan — Text → Transaction Flow
+        <div className="text-center space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+            Parnuan Personal Finance
           </h1>
-          <p className="text-sm text-neutral-400">
-            Proof of Concept (Hybrid Parser: Groq LLM + Rule-based Engine)
+          <p className="text-sm text-neutral-500 font-medium">
+            แปลงข้อความภาษาธรรมชาติเป็นรายการบันทึกการเงินอัตโนมัติ
           </p>
         </div>
 
-        {/* Input Chat Box */}
-        <div className="bg-neutral-800 rounded-2xl p-3 border border-neutral-700 flex items-center gap-2 shadow-lg">
+        {/* Input Chat Box (Light Theme) */}
+        <div className="bg-white rounded-2xl p-2.5 border border-neutral-200/80 flex items-center gap-2 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleParse()}
             placeholder="พิมพ์ข้อความบันทึกการเงิน เช่น ข้าวมันไก่ 50..."
-            className="flex-1 bg-transparent px-3 py-2 text-sm focus:outline-none placeholder-neutral-500 text-neutral-100"
+            className="flex-1 bg-transparent px-3 py-2 text-sm focus:outline-none placeholder-neutral-400 text-neutral-800"
           />
           <button
             onClick={() => handleParse()}
             disabled={isLoading || !inputText.trim()}
-            className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white p-2.5 rounded-xl transition disabled:opacity-40 flex items-center justify-center"
+            className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white p-2.5 rounded-xl transition disabled:opacity-40 flex items-center justify-center shadow-sm"
           >
             {isLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -174,7 +174,7 @@ export default function Home() {
         {parseResult && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* กล่องการ์ดใหญ่สไตล์ Parnuan Creamy Theme */}
-            <div className="bg-[#FFFDF7] text-neutral-800 rounded-3xl p-5 shadow-2xl space-y-6 border border-amber-100/50 overflow-hidden relative">
+            <div className="bg-[#FFFDF7] text-neutral-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-6 border border-amber-100/60 overflow-hidden relative">
               {/* Card Header & Status */}
               <div className="flex items-center justify-between border-b border-amber-200/40 pb-4">
                 <div>
@@ -189,7 +189,7 @@ export default function Home() {
                   </p>
                 </div>
                 {/* Visual Avatar / Mascot Placeholder */}
-                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-xl">
+                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-xl shadow-inner">
                   👵🏻
                 </div>
               </div>
@@ -207,7 +207,7 @@ export default function Home() {
                         {/* Category Header Bar */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="bg-rose-500 text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                            <span className="bg-rose-500 text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-sm">
                               รายจ่าย
                             </span>
                             <span className="text-base font-bold text-neutral-800">
@@ -330,33 +330,6 @@ export default function Home() {
                                         </button>
                                       </div>
                                     </div>
-                                  </div>
-
-                                  {/* Parser Engine Badge */}
-                                  <div className="pt-1 flex items-center gap-2 border-t border-neutral-100">
-                                    <span
-                                      className={`text-[10px] px-2 py-0.5 rounded-md font-medium flex items-center gap-1 ${
-                                        tx.parser_source === "LLM"
-                                          ? "bg-purple-100 text-purple-700"
-                                          : "bg-amber-100 text-amber-700"
-                                      }`}
-                                    >
-                                      {tx.parser_source === "LLM" ? (
-                                        <>
-                                          <Sparkles className="w-3 h-3" /> Groq
-                                          LLM
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Zap className="w-3 h-3" /> Rule
-                                          Engine
-                                        </>
-                                      )}
-                                    </span>
-                                    <span className="text-[10px] text-neutral-400">
-                                      Confidence:{" "}
-                                      {Math.round(tx.confidence * 100)}%
-                                    </span>
                                   </div>
                                 </>
                               )}
